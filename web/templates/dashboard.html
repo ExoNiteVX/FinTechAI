@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% set active = 'dashboard' %}
+{% block title %}{{ t('nav.dashboard') }}{% endblock %}
+
+{% block content %}
+
+<section class="section container" style="padding-top:3rem">
+  <div class="section-head">
+    <div class="eyebrow">{{ t('dash.eyebrow') }}</div>
+    <h2>{{ t('dash.title') }}</h2>
+    <p>{{ t('dash.subtitle') }}</p>
+  </div>
+
+  {% if not metrics %}
+    <div class="empty">
+      <h3>{{ t('dash.empty_t') }}</h3>
+      <p>{{ t('dash.empty_d') }}</p>
+    </div>
+  {% else %}
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">{{ t('kpi.signals') }}</div>
+      <div class="kpi-value">{{ "{:,}".format(metrics.n_signals) }}</div></div>
+    <div class="kpi"><div class="kpi-label">{{ t('kpi.transactions') }}</div>
+      <div class="kpi-value">{{ "{:,}".format(metrics.n_transactions) }}</div></div>
+    <div class="kpi"><div class="kpi-label">{{ t('kpi.escalation_rate') }}</div>
+      <div class="kpi-value">{{ '%.1f'|format(metrics.escalation_rate * 100) }}%</div></div>
+    <div class="kpi"><div class="kpi-label">{{ t('kpi.mean_prob') }}</div>
+      <div class="kpi-value">{{ '%.2f'|format(metrics.mean_prob) }}</div></div>
+  </div>
+
+  <div class="dash-grid" style="margin-top:2rem">
+    <div class="panel"><div class="panel-title">{{ t('dash.p_dir') }}</div><canvas id="c_dir"></canvas></div>
+    <div class="panel"><div class="panel-title">{{ t('dash.p_types') }}</div><canvas id="c_types"></canvas></div>
+    <div class="panel"><div class="panel-title">{{ t('dash.p_amt') }}</div><canvas id="c_amt"></canvas></div>
+    <div class="panel"><div class="panel-title">{{ t('dash.p_evd') }}</div><canvas id="c_evd"></canvas></div>
+    <div class="panel" style="grid-column: 1 / -1;">
+      <div class="panel-title">{{ t('dash.p_prob') }}</div><canvas id="c_prob"></canvas>
+    </div>
+  </div>
+
+  {% endif %}
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+{% if metrics %}
+<script>
+const palette = ['#6366f1','#22d3ee','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
+const baseOpts = {
+  responsive: true,
+  plugins: { legend: { labels: { color:'#8b96b8' } } },
+  scales: {
+    x: { ticks: { color:'#8b96b8' }, grid: { color:'#1f2944' } },
+    y: { ticks: { color:'#8b96b8' }, grid: { color:'#1f2944' } }
+  }
+};
+const dir = {{ dir_counts|safe }};
+new Chart(document.getElementById('c_dir'), {
+  type:'doughnut',
+  data:{labels:Object.keys(dir),datasets:[{data:Object.values(dir),
+        backgroundColor:palette,borderColor:'#151b2e',borderWidth:2}]},
+  options:{plugins:{legend:{position:'bottom',labels:{color:'#8b96b8'}}}}
+});
+const typ = {{ type_counts|safe }};
+new Chart(document.getElementById('c_types'), {
+  type:'bar', data:{labels:Object.keys(typ),
+        datasets:[{data:Object.values(typ),backgroundColor:'#6366f1',borderRadius:6}]},
+  options: baseOpts
+});
+const amt = {{ amount_data|safe }};
+new Chart(document.getElementById('c_amt'), {
+  type:'bar', data:{labels:amt.edges.slice(1).map(x=>x.toFixed(1)),
+        datasets:[{data:amt.counts,backgroundColor:'#22d3ee',borderRadius:4}]},
+  options: baseOpts
+});
+const evd = {{ evd|safe }};
+new Chart(document.getElementById('c_evd'), {
+  type:'bar', data:{labels:Object.keys(evd).map(k => k==='0' ? '0' : '1'),
+        datasets:[{data:Object.values(evd),backgroundColor:['#64748b','#ef4444'],borderRadius:6}]},
+  options:{...baseOpts,plugins:{legend:{display:false}}}
+});
+const pd_ = {{ prob_dist|safe }};
+new Chart(document.getElementById('c_prob'), {
+  type:'bar', data:{labels:pd_.edges.slice(1).map(x=>x.toFixed(2)),
+        datasets:[{data:pd_.counts,backgroundColor:'#8b5cf6',borderRadius:4}]},
+  options:{...baseOpts,plugins:{legend:{display:false}}}
+});
+</script>
+{% endif %}
+{% endblock %}

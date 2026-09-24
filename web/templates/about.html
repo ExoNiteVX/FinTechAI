@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% set active = 'about' %}
+{% block title %}{{ t('nav.about') }}{% endblock %}
+
+{% block content %}
+
+<section class="section container" style="padding-top:4rem">
+  <div class="section-head">
+    <div class="eyebrow">{{ t('about.eyebrow') }}</div>
+    <h2>{{ t('about.title') }}</h2>
+    <p>{{ t('about.subtitle') }}</p>
+  </div>
+
+  <div class="pipeline">
+    <div class="step"><div class="step-num">1</div><h4>{{ t('about.p1') }}</h4><p>{{ t('about.p1d') }}</p></div>
+    <div class="step"><div class="step-num">2</div><h4>{{ t('about.p2') }}</h4><p>{{ t('about.p2d') }}</p></div>
+    <div class="step"><div class="step-num">3</div><h4>{{ t('about.p3') }}</h4><p>{{ t('about.p3d') }}</p></div>
+    <div class="step"><div class="step-num">4</div><h4>{{ t('about.p4') }}</h4><p>{{ t('about.p4d') }}</p></div>
+    <div class="step"><div class="step-num">5</div><h4>{{ t('about.p5') }}</h4><p>{{ t('about.p5d') }}</p></div>
+  </div>
+</section>
+
+<section class="section container">
+  <div class="callout" style="text-align:center">
+    <h4>{{ t('home.cta_title') }}</h4>
+    <p>{{ t('home.cta_desc') }}</p>
+    <div class="cta-row" style="margin-top:1rem;margin-bottom:0">
+      <a href="/dashboard" class="btn btn-primary">{{ t('home.cta_dashboard') }}</a>
+      <a href="/predictions" class="btn btn-ghost">{{ t('home.cta_predictions') }}</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

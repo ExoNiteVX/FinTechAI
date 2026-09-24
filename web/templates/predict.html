@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% set active = 'predict' %}
+{% block title %}{{ t('nav.predict') }}{% endblock %}
+
+{% block content %}
+
+<section class="section container" style="padding-top:3rem">
+  <div class="section-head">
+    <div class="eyebrow">{{ t('predict.eyebrow') }}</div>
+    <h2>{{ t('predict.title') }}</h2>
+    <p>{{ t('predict.subtitle') }}</p>
+  </div>
+
+  {% if model_info and model_info.error %}
+    <div class="alert alert-danger">
+      <strong>{{ t('predict.model_unavail') }}</strong> {{ model_info.error }}
+    </div>
+  {% endif %}
+  {% if error %}
+    <div class="alert alert-danger">
+      <strong>{{ t('predict.error_prefix') }}</strong> {{ error }}
+    </div>
+  {% endif %}
+
+  <form class="upload-form" method="POST" enctype="multipart/form-data" id="uploadForm">
+    <div class="upload-grid">
+
+      <label class="dropzone" for="transactions" id="dz-txn">
+        <input type="file" name="transactions" id="transactions" accept=".csv" multiple required>
+        <div class="dz-icon">📄</div>
+        <div class="dz-title">{{ t('predict.dz_txn_title') }} <span class="req">{{ t('predict.required') }}</span></div>
+        <div class="dz-hint">{{ t('predict.dz_txn_hint', n=model_info.max_files) }}</div>
+        <ul class="dz-files" id="files-txn"></ul>
+      </label>
+
+      <label class="dropzone" for="signals" id="dz-sig">
+        <input type="file" name="signals" id="signals" accept=".csv" multiple>
+        <div class="dz-icon">📊</div>
+        <div class="dz-title">{{ t('predict.dz_sig_title') }} <span class="opt">{{ t('predict.optional') }}</span></div>
+        <div class="dz-hint">{{ t('predict.dz_sig_hint') }}</div>
+        <ul class="dz-files" id="files-sig"></ul>
+      </label>
+
+    </div>
+
+    <div class="upload-actions">
+      <button type="submit" class="btn btn-primary" id="submitBtn">{{ t('predict.run') }}</button>
+      <span class="upload-note">{{ t('predict.note', n=model_info.max_files, mb=model_info.max_mb, f=model_info.n_features) }}</span>
+    </div>
+  </form>
+
+  <div class="callout" style="margin-top:2rem">
+    <h4>{{ t('predict.expected_title') }}</h4>
+    <p style="margin-bottom:.5rem"><strong>{{ t('predict.expected_txn') }}</strong></p>
+    <p class="mono" style="font-size:.85rem;color:var(--text-dim)">
+      txn_id, signal_id, txn_time, amount, direction, txn_type, country, currency
+    </p>
+    <p style="margin:.75rem 0 .5rem"><strong>{{ t('predict.expected_sig') }}</strong></p>
+    <p class="mono" style="font-size:.85rem;color:var(--text-dim)">
+      signal_id, signal_time, label, signal_type, channel
+    </p>
+    <p style="margin-top:.75rem;color:var(--text-faint);font-size:.85rem">
+      {{ t('predict.expected_foot') }}
+    </p>
+  </div>
+
+  {% if success %}
+  <div class="results">
+    <div class="results-head">
+      <h2>{{ t('predict.success') }}</h2>
+      <a href="{{ url_for('download', token=success.token) }}"
+         class="btn btn-primary">{{ t('predict.download') }}</a>
+    </div>
+
+    <div class="kpi-grid" style="margin-top:1.5rem">
+      <div class="kpi"><div class="kpi-label">{{ t('kpi.signals_scored') }}</div>
+        <div class="kpi-value">{{ "{:,}".format(success.n_total) }}</div></div>
+      <div class="kpi"><div class="kpi-label">{{ t('kpi.high_risk') }}</div>
+        <div class="kpi-value">{{ "{:,}".format(success.n_high) }}</div>
+        <div class="kpi-sub"><span class="pill pill-danger">{{ t('band.escalate') }}</span></div></div>
+      <div class="kpi"><div class="kpi-label">{{ t('kpi.medium_risk') }}</div>
+        <div class="kpi-value">{{ "{:,}".format(success.n_mid) }}</div>
+        <div class="kpi-sub"><span class="pill pill-warn">{{ t('band.review') }}</span></div></div>
+      <div class="kpi"><div class="kpi-label">{{ t('kpi.mean_prob_short') }}</div>
+        <div class="kpi-value">{{ '%.3f'|format(success.mean_prob) }}</div>
+        <div class="kpi-sub">{{ t('kpi.max_short', p='%.3f'|format(success.max_prob)) }}</div></div>
+    </div>
+
+    <h3 style="margin-top:2.5rem;margin-bottom:1rem">{{ t('predict.top_table') }}</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('table.rank') }}</th>
+            <th>{{ t('table.signal_id') }}</th>
+            <th>{{ t('table.probability') }}</th>
+            <th>{{ t('table.band') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in success.top %}
+          {% set p = r.escalation_probability %}
+          <tr>
+            <td class="mono">{{ loop.index }}</td>
+            <td class="mono">{{ r.signal_id }}</td>
+            <td><div class="prob-cell">
+              <div class="prob-bar"><span style="width: {{ (p*100)|round(1) }}%"></span></div>
+              <span class="prob-num">{{ '%.3f'|format(p) }}</span>
+            </div></td>
+            <td>
+              {% if p >= 0.7 %}<span class="pill pill-danger">{{ t('band.escalate') }}</span>
+              {% elif p >= 0.3 %}<span class="pill pill-warn">{{ t('band.review') }}</span>
+              {% else %}<span class="pill pill-success">{{ t('band.dismiss') }}</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p style="text-align:center;color:var(--text-faint);font-size:.85rem;margin-top:1rem">
+      {{ t('predict.showing', n=success.n_total) }}
+    </p>
+  </div>
+  {% endif %}
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const MAX_FILES = {{ model_info.max_files }};
+function fmtSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1024/1024).toFixed(2) + ' MB';
+}
+function renderFileList(input, listEl) {
+  listEl.innerHTML = '';
+  const files = Array.from(input.files);
+  let total = 0;
+  files.forEach(f => {
+    total += f.size;
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="dz-file-name">${f.name}</span>
+                    <span class="dz-file-size">${fmtSize(f.size)}</span>`;
+    listEl.appendChild(li);
+  });
+  if (files.length > 1) {
+    const li = document.createElement('li');
+    li.className = 'dz-file-total';
+    li.innerHTML = `<span>${files.length}</span><span>${fmtSize(total)}</span>`;
+    listEl.appendChild(li);
+  }
+}
+function wire(inputId, dzId, listId) {
+  const input = document.getElementById(inputId);
+  const dz    = document.getElementById(dzId);
+  const list  = document.getElementById(listId);
+  if (!input) return;
+  input.addEventListener('change', () => {
+    if (input.files.length > MAX_FILES) {
+      alert(`Max ${MAX_FILES} files. Extra files were ignored.`);
+      const dt = new DataTransfer();
+      Array.from(input.files).slice(0, MAX_FILES).forEach(f => dt.items.add(f));
+      input.files = dt.files;
+    }
+    renderFileList(input, list);
+  });
+  ['dragenter','dragover'].forEach(ev =>
+    dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('dragover'); }));
+  ['dragleave','drop'].forEach(ev =>
+    dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('dragover'); }));
+  dz.addEventListener('drop', e => {
+    const files = Array.from(e.dataTransfer.files).filter(f => /\.csv$/i.test(f.name));
+    if (!files.length) return;
+    const dt = new DataTransfer();
+    files.slice(0, MAX_FILES).forEach(f => dt.items.add(f));
+    input.files = dt.files;
+    renderFileList(input, list);
+  });
+}
+wire('transactions', 'dz-txn', 'files-txn');
+wire('signals',      'dz-sig', 'files-sig');
+
+document.getElementById('uploadForm').addEventListener('submit', () => {
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = "{{ t('predict.running') }}";
+});
+</script>
+{% endblock %}

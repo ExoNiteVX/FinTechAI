@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="{{ current_lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}{{ t('nav.home') }}{% endblock %} · EscalationLens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% block head %}{% endblock %}
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a href="/" class="logo">
+      <span class="logo-dot"></span>
+      <span>EscalationLens</span>
+    </a>
+
+    <div class="nav-links">
+      <a href="/"            class="{{ 'active' if active=='home'        else '' }}">{{ t('nav.home') }}</a>
+      <a href="/about"       class="{{ 'active' if active=='about'       else '' }}">{{ t('nav.about') }}</a>
+      <a href="/dashboard"   class="{{ 'active' if active=='dashboard'   else '' }}">{{ t('nav.dashboard') }}</a>
+      <a href="/predictions" class="{{ 'active' if active=='predictions' else '' }}">{{ t('nav.predictions') }}</a>
+      <a href="/predict"     class="{{ 'active' if active=='predict'     else '' }}">🔮 {{ t('nav.predict') }}</a>
+    </div>
+
+    <div class="lang-switch" role="group" aria-label="Language">
+      {% for code in supported_langs %}
+        <a href="{{ url_for('set_language', lang=code) }}"
+           class="{{ 'active' if code == current_lang else '' }}"
+           title="{{ lang_names[code] }}">{{ lang_labels[code] }}</a>
+      {% endfor %}
+    </div>
+  </div>
+</nav>
+
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+<footer>
+  <div class="container">
+    <p>{{ t('nav.footer') }}</p>
+  </div>
+</footer>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

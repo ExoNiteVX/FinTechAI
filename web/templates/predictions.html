@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+{% set active = 'predictions' %}
+{% block title %}{{ t('nav.predictions') }}{% endblock %}
+
+{% block content %}
+
+<section class="section container" style="padding-top:3rem">
+  <div class="section-head">
+    <div class="eyebrow">{{ t('pred.eyebrow') }}</div>
+    <h2>{{ t('pred.title') }}</h2>
+    <p>{{ t('pred.subtitle') }}</p>
+    {% if pred_source %}
+      <p style="color:var(--text-faint);font-size:.82rem;margin-top:.4rem">
+        Source: <span class="mono">{{ pred_source }}</span>
+      </p>
+    {% endif %}
+  </div>
+
+  {% if not preds %}
+    <div class="empty">
+      <h3>{{ t('pred.empty_t') }}</h3>
+      <p>{{ t('pred.empty_d') }}</p>
+    </div>
+  {% else %}
+
+  <!-- ===================== KPI band ===================== -->
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-label">{{ t('kpi.total_scored') }}</div>
+      <div class="kpi-value">{{ "{:,}".format(n_total) }}</div>
+      <div class="kpi-sub">&nbsp;</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">{{ t('kpi.high_risk') }}</div>
+      <div class="kpi-value">{{ "{:,}".format(n_high) }}</div>
+      <div class="kpi-sub"><span class="pill pill-danger">{{ t('band.escalate') }}</span></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">{{ t('kpi.medium_risk') }}</div>
+      <div class="kpi-value">{{ "{:,}".format(n_mid) }}</div>
+      <div class="kpi-sub"><span class="pill pill-warn">{{ t('band.review') }}</span></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">{{ t('kpi.low_risk') }}</div>
+      <div class="kpi-value">{{ "{:,}".format(n_low) }}</div>
+      <div class="kpi-sub"><span class="pill pill-success">{{ t('band.dismiss') }}</span></div>
+    </div>
+  </div>
+
+  <!-- ===================== Accuracy callout ===================== -->
+  {% if accuracy is not none %}
+  <div class="callout" style="margin-top:1.5rem">
+    <h4>{{ t('pred.acc_title') }}</h4>
+    <p style="margin-bottom:.6rem">
+      {{ t('pred.acc_line', p='%.2f'|format(accuracy * 100)) }}
+      <span class="mono" style="color:var(--text-faint)">
+        ({{ tp }} TP · {{ fp }} FP · {{ tn }} TN · {{ fn }} FN)
+      </span>
+    </p>
+    <div class="kpi-grid" style="margin-top:.5rem">
+      <div class="kpi">
+        <div class="kpi-label">{{ t('pred.acc_correct') }}</div>
+        <div class="kpi-value">{{ "{:,}".format(tp + tn) }}</div>
+        <div class="kpi-sub">{{ '%.1f'|format(accuracy * 100) }}%</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">{{ t('pred.acc_tp') }}</div>
+        <div class="kpi-value">{{ tp }}</div>
+        <div class="kpi-sub">{{ t('pred.acc_tp_sub') }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">{{ t('pred.acc_fp') }}</div>
+        <div class="kpi-value">{{ fp }}</div>
+        <div class="kpi-sub">{{ t('pred.acc_fp_sub') }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">{{ t('pred.acc_fn') }}</div>
+        <div class="kpi-value">{{ fn }}</div>
+        <div class="kpi-sub">{{ t('pred.acc_fn_sub') }}</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ===================== Charts ===================== -->
+  <div class="dash-grid" style="margin-top:2rem">
+    <div class="panel">
+      <div class="panel-title">{{ t('pred.chart_hist') }}</div>
+      <canvas id="c_pred_hist"></canvas>
+    </div>
+    <div class="panel">
+      <div class="panel-title">{{ t('pred.chart_conf') }}</div>
+      <canvas id="c_confusion"></canvas>
+    </div>
+  </div>
+
+  <!-- ===================== Top 20 table ===================== -->
+  <h3 style="margin-top:2.5rem;margin-bottom:1rem">{{ t('pred.top20') }}</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>{{ t('table.rank') }}</th>
+          <th>{{ t('table.signal_id') }}</th>
+          <th>{{ t('table.ground_truth') }}</th>
+          <th>{{ t('table.probability') }}</th>
+          <th>{{ t('table.band') }}</th>
+          <th>{{ t('table.match') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in top %}
+        {% set p = r.escalation_probability %}
+        <tr>
+          <td class="mono">{{ loop.index }}</td>
+          <td class="mono">{{ r.signal_id }}</td>
+          <td>
+            {% if r.label is not none %}
+              {% if r.label == 1 %}
+                <span class="pill pill-danger">{{ t('gt.escalated') }}</span>
+              {% else %}
+                <span class="pill pill-success">{{ t('gt.dismissed') }}</span>
+              {% endif %}
+            {% else %}
+              <span class="pill">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="prob-cell">
+              <div class="prob-bar"><span style="width: {{ (p*100)|round(1) }}%"></span></div>
+              <span class="prob-num">{{ '%.4f'|format(p) }}</span>
+            </div>
+          </td>
+          <td>
+            {% if p >= 0.7 %}<span class="pill pill-danger">{{ t('band.escalate') }}</span>
+            {% elif p >= 0.3 %}<span class="pill pill-warn">{{ t('band.review') }}</span>
+            {% else %}<span class="pill pill-success">{{ t('band.dismiss') }}</span>{% endif %}
+          </td>
+          <td>
+            {% if r.correct is not none and r.label is not none %}
+              {% if r.correct %}<span class="match-ok">✓</span>
+              {% else %}<span class="match-bad">✗</span>{% endif %}
+            {% else %}
+              <span class="match-na">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===================== All signals table ===================== -->
+  <h3 style="margin-top:2.5rem;margin-bottom:1rem">{{ t('pred.all', n=n_total) }}</h3>
+  <div class="table-wrap" style="max-height:640px;overflow-y:auto">
+    <table>
+      <thead>
+        <tr>
+          <th>{{ t('table.rank') }}</th>
+          <th>{{ t('table.signal_id') }}</th>
+          <th>{{ t('table.ground_truth') }}</th>
+          <th>{{ t('table.probability') }}</th>
+          <th>{{ t('table.predicted') }}</th>
+          <th>{{ t('table.match') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in preds %}
+        <tr>
+          <td class="mono">{{ loop.index }}</td>
+          <td class="mono">{{ r.signal_id }}</td>
+          <td>
+            {% if r.label is not none %}
+              {% if r.label == 1 %}<span class="gt-pos">1</span>
+              {% else %}<span class="gt-neg">0</span>{% endif %}
+            {% else %}
+              <span class="match-na">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="prob-cell">
+              <div class="prob-bar"><span style="width: {{ (r.escalation_probability*100)|round(1) }}%"></span></div>
+              <span class="prob-num">{{ '%.4f'|format(r.escalation_probability) }}</span>
+            </div>
+          </td>
+          <td>
+            {% if r.predicted == 1 %}<span class="pill pill-danger">1</span>
+            {% else %}<span class="pill pill-success">0</span>{% endif %}
+          </td>
+          <td>
+            {% if r.correct is not none and r.label is not none %}
+              {% if r.correct %}<span class="match-ok">✓</span>
+              {% else %}<span class="match-bad">✗</span>{% endif %}
+            {% else %}
+              <span class="match-na">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===================== API ===================== -->
+  <div class="callout" style="margin-top:2rem">
+    <h4>{{ t('pred.api_t') }}</h4>
+    <p>{{ t('pred.api_d') }}</p>
+  </div>
+
+  {% endif %}
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+{% if preds %}
+
+<script>
+/* =========================================================
+   Charts on the predictions page:
+     1) Histogram of predicted probabilities (0 → 1, 20 bins)
+     2) Confusion matrix @ threshold 0.5
+   ========================================================= */
+
+const baseOpts = {
+  responsive: true,
+  plugins: { legend: { labels: { color: '#8b96b8' } } },
+  scales: {
+    x: { ticks: { color: '#8b96b8' }, grid: { color: '#1f2944' } },
+    y: { ticks: { color: '#8b96b8' }, grid: { color: '#1f2944' } }
+  }
+};
+
+/* ---------- 1) Probability histogram ---------- */
+const allProbs = [
+  {% for r in preds %}{{ r.escalation_probability }}{% if not loop.last %},{% endif %}{% endfor %}
+];
+
+const N_BINS = 20;
+const bins = new Array(N_BINS).fill(0);
+allProbs.forEach(p => {
+  const idx = Math.min(N_BINS - 1, Math.max(0, Math.floor(p * N_BINS)));
+  bins[idx]++;
+});
+
+// Colour each bin by where it sits on the risk scale
+const binColors = bins.map((_, i) => {
+  const center = (i + 0.5) / N_BINS;
+  if (center < 0.3) return '#10b981';   // dismiss
+  if (center < 0.7) return '#f59e0b';   // review
+  return '#ef4444';                      // escalate
+});
+
+new Chart(document.getElementById('c_pred_hist'), {
+  type: 'bar',
+  data: {
+    labels: [...Array(N_BINS).keys()].map(i => ((i + 0.5) / N_BINS).toFixed(2)),
+    datasets: [{
+      data: bins,
+      backgroundColor: binColors,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    ...baseOpts,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          title: (items) => `p ≈ ${items[0].label}`,
+          label: (item) => ` ${item.parsed.y} signals`
+        }
+      }
+    },
+    scales: {
+      ...baseOpts.scales,
+      x: {
+        ...baseOpts.scales.x,
+        title: { display: true, text: 'Predicted probability', color: '#8b96b8' }
+      },
+      y: {
+        ...baseOpts.scales.y,
+        title: { display: true, text: 'Count', color: '#8b96b8' }
+      }
+    }
+  }
+});
+
+/* ---------- 2) Confusion matrix @ 0.5 ---------- */
+{% if accuracy is not none %}
+new Chart(document.getElementById('c_confusion'), {
+  type: 'bar',
+  data: {
+    labels: [
+      '{{ t("pred.cm_tp") }} ({{ tp }})',
+      '{{ t("pred.cm_fp") }} ({{ fp }})',
+      '{{ t("pred.cm_tn") }} ({{ tn }})',
+      '{{ t("pred.cm_fn") }} ({{ fn }})',
+    ],
+    datasets: [{
+      data: [{{ tp }}, {{ fp }}, {{ tn }}, {{ fn }}],
+      backgroundColor: ['#10b981', '#f59e0b', '#22d3ee', '#ef4444'],
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (item) => ` ${item.parsed.x} signals`
+        }
+      }
+    },
+    scales: {
+      x: { ticks: { color: '#8b96b8' }, grid: { color: '#1f2944' } },
+      y: { ticks: { color: '#8b96b8' }, grid: { color: '#1f2944' } }
+    }
+  }
+});
+{% else %}
+// No labels in the uploaded data → show a friendly placeholder
+const cmCanvas = document.getElementById('c_confusion');
+if (cmCanvas) {
+  const ctx = cmCanvas.getContext('2d');
+  cmCanvas.width = cmCanvas.clientWidth;
+  cmCanvas.height = 260;
+  ctx.fillStyle = '#8b96b8';
+  ctx.font = '14px Inter, system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(
+    "{{ t('pred.cm_no_labels') }}",
+    cmCanvas.width / 2,
+    cmCanvas.height / 2
+  );
+}
+{% endif %}
+
+</script>
+
+{% endif %}
+{% endblock %}

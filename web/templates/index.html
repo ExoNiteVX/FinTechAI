@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% set active = 'home' %}
+{% block title %}{{ t('nav.home') }}{% endblock %}
+
+{% block content %}
+
+<section class="hero container">
+  <div class="badge">
+    <span class="pulse"></span>
+    {{ t('home.badge') }}
+  </div>
+  <h1 class="title">
+    {{ t('home.title_1') }}<br>
+    <span class="grad">{{ t('home.title_2') }}</span>
+  </h1>
+  <p class="subtitle">{{ t('home.subtitle') }}</p>
+  <div class="cta-row">
+    <a href="/dashboard"   class="btn btn-primary">{{ t('home.cta_dashboard') }}</a>
+    <a href="/predictions" class="btn btn-ghost">{{ t('home.cta_predictions') }}</a>
+    <a href="/about"       class="btn btn-ghost">{{ t('home.cta_about') }}</a>
+  </div>
+</section>
+
+{% if metrics %}
+<section class="section container">
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-label">{{ t('kpi.signals_analysed') }}</div>
+      <div class="kpi-value">{{ "{:,}".format(metrics.n_signals) }}</div>
+      <div class="kpi-sub">{{ t('kpi.historic_signals') }}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">{{ t('kpi.transactions') }}</div>
+      <div class="kpi-value">{{ "{:,}".format(metrics.n_transactions) }}</div>
+      <div class="kpi-sub">{{ t('kpi.across_signals') }}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">{{ t('kpi.escalation_rate') }}</div>
+      <div class="kpi-value">{{ '%.1f'|format(metrics.escalation_rate * 100) }}%</div>
+      <div class="kpi-sub">{{ t('kpi.of_signals', a=metrics.n_escalated, b=metrics.n_signals) }}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">{{ t('kpi.mean_prob') }}</div>
+      <div class="kpi-value">{{ '%.2f'|format(metrics.mean_prob) }}</div>
+      <div class="kpi-sub">{{ t('kpi.across_all') }}</div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section container">
+  <div class="section-head">
+    <div class="eyebrow">{{ t('home.feat_eyebrow') }}</div>
+    <h2>{{ t('home.feat_title') }}</h2>
+    <p>{{ t('home.feat_sub') }}</p>
+  </div>
+
+  <div class="features">
+    <div class="feature"><div class="feature-icon">⚙️</div><h3>{{ t('home.f1_t') }}</h3><p>{{ t('home.f1_d') }}</p></div>
+    <div class="feature"><div class="feature-icon">🌲</div><h3>{{ t('home.f2_t') }}</h3><p>{{ t('home.f2_d') }}</p></div>
+    <div class="feature"><div class="feature-icon">🎯</div><h3>{{ t('home.f3_t') }}</h3><p>{{ t('home.f3_d') }}</p></div>
+    <div class="feature"><div class="feature-icon">🔍</div><h3>{{ t('home.f4_t') }}</h3><p>{{ t('home.f4_d') }}</p></div>
+    <div class="feature"><div class="feature-icon">📡</div><h3>{{ t('home.f5_t') }}</h3><p>{{ t('home.f5_d') }}</p></div>
+    <div class="feature"><div class="feature-icon">⚡</div><h3>{{ t('home.f6_t') }}</h3><p>{{ t('home.f6_d') }}</p></div>
+  </div>
+</section>
+
+<section class="section container">
+  <div class="callout" style="text-align:center">
+    <h4>{{ t('home.cta_title') }}</h4>
+    <p>{{ t('home.cta_desc') }}</p>
+    <div class="cta-row" style="margin-top:1rem;margin-bottom:0">
+      <a href="/dashboard" class="btn btn-primary">{{ t('home.cta_btn') }}</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
